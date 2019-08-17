@@ -1,26 +1,22 @@
 package httpserver;
 
-
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 
-public class HTTPServer {
-    protected ServerSocket listenSocket;
-    protected Socket connection;
-    protected BufferedReader in;
-    protected BufferedOutputStream out;
+public class HTTPThread implements Runnable {
+    private final Socket connection;
+    private BufferedReader in;
+    private BufferedOutputStream out;
 
-    public HTTPServer() throws Exception{
-        this.listenSocket = new ServerSocket(2022);
-        this.connection = listenSocket.accept();
+    public HTTPThread(Socket s) throws Exception{
+        this.connection = s;
         this.in  = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         this.out = new BufferedOutputStream(new DataOutputStream(connection.getOutputStream()));
     }
 
-    public String parseRequest() throws Exception{
+    public String parseRequest(String Status) throws Exception{
         // return requested file path from request head
-        String status = in.readLine();
+        String status = Status;
         System.out.println(status);
         String s = status.split(" ")[1];
         if(s.startsWith("/")){s = s.substring(1);}
@@ -39,24 +35,24 @@ public class HTTPServer {
         return filebytes;
     }
 
-    public static void main(String[] args) throws Exception {
-        // initialize HTTPServer
-        HTTPServer webserver = new HTTPServer();
-
-            String file_name = webserver.parseRequest();
+    public void run(){
+        try {
+            String status = in.readLine();
+            String file_name = parseRequest(status);
             System.out.println(file_name);
 
-            webserver.out.write(new String("HTTP/1.1 200 have a nice day\r\n\r\n").getBytes());
+            out.write(new String("HTTP/1.1 200 have a nice day\r\n\r\n").getBytes());
             if (new File(file_name).exists()) {
-                webserver.out.write(webserver.response(file_name));
+                out.write(response(file_name));
                 System.out.println("specified file sended");
             } else {
-                webserver.out.write(webserver.response("404.html"));
+                out.write(response("404.html"));
                 System.out.println("404");
             }
-            webserver.out.flush();
+            out.flush();
+        }catch (Exception e){e.printStackTrace();}
 
-        webserver.connection.close();
+        try{connection.close();}catch (Exception e2){e2.printStackTrace();
+            System.out.println("connection won't close properly");}
     }
-
 }
